@@ -1,0 +1,150 @@
+import turtle
+import time
+import random
+
+delay = 0.1
+score = 0
+high_score = 0
+
+screen = turtle.Screen()
+screen.bgcolor("Black")
+screen.setup(width=600, height=600)
+screen.tracer(0,0)
+
+head = turtle.Turtle()
+head.shape("circle")
+head.color("white")
+head.penup()
+head.goto(0, 0)
+head.direction = "Stop"
+
+food = turtle.Turtle()
+colors = 'green'
+shapes = 'square'
+food.speed(0)
+food.shape(shapes)
+food.color(colors)
+food.penup()
+food.goto(0, 100)
+
+
+
+# assigning key directions
+def group():
+    if head.direction != "down":
+        head.direction = "up"
+
+
+def godown():
+    if head.direction != "up":
+        head.direction = "down"
+
+
+def goleft():
+    if head.direction != "right":
+        head.direction = "left"
+
+
+def goright():
+    if head.direction != "left":
+        head.direction = "right"
+
+
+def move():
+    x = head.xcor()
+    y = head.ycor()
+    if head.direction == "up":
+        head.sety(y + 20)
+
+    if head.direction == "down":
+        head.sety(y - 20)
+
+    if head.direction == "left":
+        head.setx(x - 20)
+
+    if head.direction == "right":
+        head.setx(x + 20)
+
+def move2():
+    x = head.xcor()
+    y = head.ycor()
+    if head.direction == "up":
+        parts[0].goto(x, y - 18)
+    if head.direction == "down":
+        parts[0].goto(x, y + 18)
+    if head.direction == "left":
+        parts[0].goto(x + 18, y)
+    if head.direction == "right":
+        parts[0].goto(x - 18, y)
+
+
+screen.listen()
+screen.onkeypress(group, "w")
+screen.onkeypress(godown, "s")
+screen.onkeypress(goleft, "a")
+screen.onkeypress(goright, "d")
+pen = turtle.Turtle()
+pen.color("white")
+pen.penup()
+pen.hideturtle()
+pen.goto(0, 250)
+pen.write("Score : 0  \nHigh Score : 0", align="center", font=("Cooper", 15, "bold"))
+
+
+parts = []
+
+while True:
+    screen.update()
+    if head.xcor() > 290 or head.xcor() < -290 or head.ycor() > 290 or head.ycor() < -290:
+        time.sleep(1)
+        head.goto(0, 0)
+        head.direction = "Stop"
+        for part in parts:
+            part.goto(1000, 1000)
+            part.clear()
+        parts.clear()
+        score = 0
+        delay = 0.1
+        pen.clear()
+        pen.write("Score : {} \nHigh Score : {} ".format(score, high_score), align="center", font=("Cooper", 15, "bold"))
+    if head.distance(food) < 20:
+        x = random.randint(-270, 270)
+        y = random.randint(-270, 270)
+        food.goto(x, y)
+
+        new_part = turtle.Turtle()
+        new_part.speed(0)
+        new_part.shape("circle")
+        new_part.color("orange")
+        new_part.penup()
+        parts.append(new_part)
+        score += 10
+        if score > high_score:
+            high_score = score
+        pen.clear()
+        pen.write("Score : {} \nHigh Score : {} ".format(
+            score, high_score), align="center", font=("Cooper", 15, "bold"))
+
+    for index in range(len(parts) - 1, 0, -1):
+        x = parts[index - 1].xcor()
+        y = parts[index - 1].ycor()
+        parts[index].goto(x, y)
+    if len(parts) > 0:
+        x = head.xcor()
+        y = head.ycor()
+        parts[0].goto(x, y)
+        #move2()
+    move()
+    for part in parts:
+        if part.distance(head) < 20:
+            time.sleep(1)
+            head.goto(0, 0)
+            head.direction = "stop"
+            for part in parts:
+                part.goto(1000, 1000)
+            parts.clear()
+            score = 0
+            delay = 0.1
+            pen.clear()
+            pen.write("Score : {} \nHigh Score : {} ".format(score, high_score), align="center", font=("Cooper", 15, "bold"))
+    time.sleep(delay)
