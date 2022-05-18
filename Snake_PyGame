@@ -1,0 +1,224 @@
+import pygame
+import random
+
+pygame.font.init()
+pygame.mixer.init()
+
+WIDTH, HEIGHT = 900, 550
+WIN = pygame.display.set_mode((WIDTH, HEIGHT))
+
+HEAD_WIDTH, HEAD_HEIGHT = 40, 40
+HEAD_RAW = (pygame.image.load("Assets/head.png"))
+TAIL_RAW_VER = (pygame.image.load("Assets/body.png"))
+TAIL_RAW_HOR = (pygame.image.load("Assets/body2.png"))
+TAIL_RAW_END = pygame.image.load("Assets/tail.png")
+FOOD_RAW = (pygame.image.load("Assets/food.png"))
+POINT = pygame.mixer.Sound("Assets/point.wav")
+GAME_END = pygame.mixer.Sound("Assets/gameover.wav")
+HEAD_VEL = 2
+score = 0
+
+
+
+SCORE_FONT = pygame.font.SysFont('comicsans', 25)
+
+HEAD_IMAGE = pygame.transform.rotate(
+    pygame.transform.scale(HEAD_RAW, (HEAD_WIDTH, HEAD_HEIGHT)), 90)
+TAIL_IMAGE = pygame.transform.rotate(
+    pygame.transform.scale(TAIL_RAW_END, (HEAD_WIDTH, HEAD_HEIGHT)), 90)
+
+TAIL_IMAGE_VER = pygame.transform.scale(TAIL_RAW_VER, (HEAD_WIDTH, HEAD_HEIGHT))
+TAIL_IMAGE_HOR = pygame.transform.scale(TAIL_RAW_HOR, (HEAD_WIDTH, HEAD_HEIGHT))
+FOOD_IMAGE = pygame.transform.scale(FOOD_RAW, (HEAD_WIDTH, HEAD_HEIGHT))
+TOP_RIGHT = pygame.transform.scale((pygame.image.load("Assets/tr.png")), (HEAD_WIDTH, HEAD_HEIGHT))
+TOP_LEFT = pygame.transform.scale((pygame.image.load("Assets/tl.png")), (HEAD_WIDTH, HEAD_HEIGHT))
+BOTTOM_RIGHT = pygame.transform.scale((pygame.image.load("Assets/br.png")), (HEAD_WIDTH, HEAD_HEIGHT))
+BOTTOM_LEFT = pygame.transform.scale((pygame.image.load("Assets/bl.png")), (HEAD_WIDTH, HEAD_HEIGHT))
+
+SIDE_HIT = pygame.USEREVENT + 1
+
+pygame.display.set_caption("Snake Game")
+
+
+def drawings(head, tails, food, tails_direction):
+    global TAIL_IMAGE
+    WIN.fill((0, 0, 0))
+    # noinspection PyTypeChecker
+    score_text = SCORE_FONT.render("Score : " + str(score), 1, (255, 255, 255))
+    WIN.blit(score_text, (10, 10))
+    WIN.blit(HEAD_IMAGE, (head.x, head.y))
+    for tail in range(len(tails) - 1):
+        if tails_direction[tail] in ["up", "down"]:
+            WIN.blit(TAIL_IMAGE_VER, (tails[tail].x, tails[tail].y))
+        else:
+            WIN.blit(TAIL_IMAGE_HOR, (tails[tail].x, tails[tail].y))
+
+    direction = tails_direction[len(tails_direction) - 1]
+    if direction == "down":
+        TAIL_IMAGE = pygame.transform.rotate(
+            pygame.transform.scale(TAIL_RAW_END, (HEAD_WIDTH, HEAD_HEIGHT)), 0)
+    elif direction == "up":
+        TAIL_IMAGE = pygame.transform.rotate(
+            pygame.transform.scale(TAIL_RAW_END, (HEAD_WIDTH, HEAD_HEIGHT)), 180)
+    elif direction == "right":
+        TAIL_IMAGE = pygame.transform.rotate(
+            pygame.transform.scale(TAIL_RAW_END, (HEAD_WIDTH, HEAD_HEIGHT)), 90)
+    elif direction == "left":
+        TAIL_IMAGE = pygame.transform.rotate(
+            pygame.transform.scale(TAIL_RAW_END, (HEAD_WIDTH, HEAD_HEIGHT)), 270)
+
+    WIN.blit(TAIL_IMAGE, (tails[len(tails) - 1].x, tails[len(tails) - 1].y))
+    WIN.blit(FOOD_IMAGE, (food.x, food.y))
+    pygame.display.update()
+
+
+def spawn_food():
+    food = pygame.Rect(random.randint(50, 850), random.randint(50, 450), 40, 40)
+    return food
+
+
+def add_tail(tails, tail_directions):
+
+    last_num = len(tails) - 1
+    x, y = 0, 0
+    if tail_directions[last_num] == "left":
+        x = tails[last_num].x + HEAD_HEIGHT
+        y = tails[last_num].y
+        tail_directions.append("left")
+    elif tail_directions[last_num] == "right":
+        x = tails[last_num].x - HEAD_HEIGHT
+        y = tails[last_num].y
+        tail_directions.append("right")
+    elif tail_directions[last_num] == "up":
+        x = tails[last_num].x
+        y = tails[last_num].y + HEAD_HEIGHT
+        tail_directions.append("up")
+    elif tail_directions[last_num] == "down":
+        x = tails[last_num].x
+        y = tails[last_num].y - HEAD_HEIGHT
+        tail_directions.append("down")
+    tail = pygame.Rect(x, y, HEAD_WIDTH, HEAD_HEIGHT)
+
+    tails.append(tail)
+
+
+def move_head(direction, head):
+    global HEAD_IMAGE, TAIL_IMAGE
+    if direction != "stop":
+        if direction == "down" and head.y + HEAD_HEIGHT + HEAD_VEL < HEIGHT:
+            HEAD_IMAGE = pygame.transform.rotate(
+                pygame.transform.scale(HEAD_RAW, (HEAD_WIDTH, HEAD_HEIGHT)), 0)
+            head.y += HEAD_VEL
+
+        elif direction == "up" and head.y - HEAD_VEL > 0:
+            HEAD_IMAGE = pygame.transform.rotate(
+                pygame.transform.scale(HEAD_RAW, (HEAD_WIDTH, HEAD_HEIGHT)), 180)
+            head.y -= HEAD_VEL
+
+        elif direction == "right" and head.x + HEAD_HEIGHT + HEAD_VEL < WIDTH:
+            HEAD_IMAGE = pygame.transform.rotate(
+                pygame.transform.scale(HEAD_RAW, (HEAD_WIDTH, HEAD_HEIGHT)), 90)
+            head.x += HEAD_VEL
+
+        elif direction == "left" and head.x - HEAD_VEL > 0:
+            HEAD_IMAGE = pygame.transform.rotate(
+                pygame.transform.scale(HEAD_RAW, (HEAD_WIDTH, HEAD_HEIGHT)), 270)
+            head.x -= HEAD_VEL
+
+        else:
+            pygame.event.post(pygame.event.Event(SIDE_HIT))
+
+
+def move_tails(tails, tails_direction, directions, change_points):
+
+    for i in range(len(tails)):
+        try:
+            if [tails[i].x, tails[i].y] in change_points:
+                tails_direction[i] = directions[change_points.index([tails[i].x, tails[i].y])]
+                if i == len(tails) - 1:
+                    del directions[0]
+                    del change_points[0]
+            if tails_direction[i] == "up":
+                tails[i].y -= HEAD_VEL
+            elif tails_direction[i] == "down":
+                tails[i].y += HEAD_VEL
+            elif tails_direction[i] == "right":
+                tails[i].x += HEAD_VEL
+            elif tails_direction[i] == "left":
+                tails[i].x -= HEAD_VEL
+
+        except:
+            if tails_direction[i] == "up":
+                tails[i].y -= HEAD_VEL
+            elif tails_direction[i] == "down":
+                tails[i].y += HEAD_VEL
+            elif tails_direction[i] == "right":
+                tails[i].x += HEAD_VEL
+            elif tails_direction[i] == "left":
+                tails[i].x -= HEAD_VEL
+
+
+def game():
+    global score
+    score = 0
+    tails = []
+    tails_directions = []
+    change_points = []
+    directions = []
+    food = spawn_food()
+    head = pygame.Rect((WIDTH / 2) - (HEAD_WIDTH / 2), (HEIGHT / 2) - (HEAD_HEIGHT / 2), HEAD_WIDTH, HEAD_HEIGHT)
+    for i in range(2):
+        tail = pygame.Rect(head.x, head.y + ((i + 1) * HEAD_HEIGHT), HEAD_WIDTH, HEAD_HEIGHT)
+
+        tails.append(tail)
+        tails_directions.append("up")
+    head_direction = "up"
+    clock = pygame.time.Clock()
+    run = True
+    while run:
+        clock.tick(100)
+        if head.colliderect(food):
+            score += 10
+            POINT.play()
+            food = spawn_food()
+            add_tail(tails, tails_directions)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_w and head_direction != "down":
+                    head_direction = "up"
+                    directions.append("up")
+                    change_points.append([head.x, head.y])
+                elif event.key == pygame.K_s and head_direction != "up":
+                    head_direction = "down"
+                    directions.append("down")
+                    change_points.append([head.x, head.y])
+                elif event.key == pygame.K_a and head_direction != "right":
+                    head_direction = "left"
+                    directions.append("left")
+                    change_points.append([head.x, head.y])
+                elif event.key == pygame.K_d and head_direction != "left":
+                    head_direction = "right"
+                    directions.append("right")
+                    change_points.append([head.x, head.y])
+            if event.type == SIDE_HIT:
+                run = False
+                GAME_END.play()
+                pygame.time.delay(1000)
+
+            for tail in range(1, len(tails)):
+                if head.colliderect(tails[tail]):
+                    run = False
+                    GAME_END.play()
+                    pygame.time.delay(1000)
+
+        move_head(head_direction, head)
+        drawings(head, tails, food, tails_directions)
+        move_tails(tails, tails_directions, directions, change_points)
+
+    game()
+
+
+game()
